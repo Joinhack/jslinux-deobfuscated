@@ -118,17 +118,18 @@ function CPU_X86() {
     /*
       0.    CF : Carry Flag. Set if the last arithmetic operation carried (addition) or borrowed (subtraction) a
                  bit beyond the size of the register. This is then checked when the operation is followed with
-                 an add-with-carry or subtract-with-borrow to deal with values too large for just one register to contain.
-      2.    PF : Parity Flag. Set if the number of set bits in the least significant byte is a multiple of 2.
-      4.    AF : Adjust Flag. Carry of Binary Code Decimal (BCD) numbers arithmetic operations.
-      6.    ZF : Zero Flag. Set if the result of an operation is Zero (0).
-      7.    SF : Sign Flag. Set if the result of an operation is negative.
-      8.    TF : Trap Flag. Set if step by step debugging.
-      9.    IF : Interruption Flag. Set if interrupts are enabled.
+                 an add-with-carry or subtract-with-borrow to deal with values too large for just one register to contain.(加法进位或减法借位该位被设置)
+      2.    PF : Parity Flag. Set if the number of set bits in the least significant byte is a multiple of 2. （运算结果是否是2得倍数的奇偶标志位）
+      4.    AF : Adjust Flag. Carry of Binary Code Decimal (BCD) numbers arithmetic operations.（在字操作时，发生低字节向高字节进位或借位时；在字节操作时，发生低4位向高4位进位或借位时。）
+      6.    ZF : Zero Flag. Set if the result of an operation is Zero (0).（运算结果为0标志为1否则为0）
+      7.    SF : Sign Flag. Set if the result of an operation is negative.（结果为负数标记为1）
+      8.    TF : Trap Flag. Set if step by step debugging.（cpu进入单步执行）
+      9.    IF : Interruption Flag. Set if interrupts are enabled.（1表示可以响应中断，0表示不能响应中断）
       10.   DF : Direction Flag. Stream direction. If set, string operations will decrement their pointer rather
-                 than incrementing it, reading memory backwards.
-      11.   OF : Overflow Flag. Set if signed arithmetic operations result in a value too large for the register to contain.
-      12-13. IOPL : I/O Privilege Level field (2 bits). I/O Privilege Level of the current process.
+                 than incrementing it, reading memory backwards.（方向标志DF用来决定在串操作指令执行时有关指针寄存器发生调整的方向）
+      11.   OF : Overflow Flag. Set if signed arithmetic operations result in a value too large for the register to contain.（运算结果超过当前运算位数所能表示的范围，OF的值被置为1）
+      12-13. IOPL : I/O Privilege Level field (2 bits). I/O Privilege Level of the current process.（I/O特权标志用两位二进制位来表示，也称为I/O特权级字段。该字段指定了要求执行I/O指令的特权级。如果当前的特权级别在数值上小于等于IOPL的值，那么，该I/O指令可执行，否则将发生一个保护异常。
+）
       14.   NT : Nested Task flag. Controls chaining of interrupts. Set if the current process is linked to the next process.
       16.   RF : Resume Flag. Response to debug exceptions.
       17.   VM : Virtual-8086 Mode. Set if in 8086 compatibility mode.
