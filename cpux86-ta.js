@@ -27,11 +27,14 @@ The exact restrictions of the emulated CPU are:
 
 
 Memory Modes
+内存模型
 =====================================================================
 
 The x86 transforms logical addresses (i.e., addresses as viewed by
 programmers) into physical address (i.e., actual addresses in physical
 memory) in two steps:
+x86转换逻辑地址到物理地址需要通过2步（这里是直译），其实Linux的转换是通过分页地址转换
+从虚拟地址转换成线性地址也就是线性地址也就是逻辑地址，然后通过分段地址转换成物理地址。
 
 - Segment translation, in which a logical address (consisting of a
 segment selector and segment offset) are converted to a linear
@@ -151,7 +154,7 @@ function CPU_X86() {
     */
     /* CR0
        ---
-       31    PG  Paging             If 1, enable paging and use the CR3 register, else disable paging
+       31    PG  Paging             If 1, enable paging and use the CR3 register, else disable paging（1表示开启分页，否则表示分页关闭）
        30    CD  Cache disable      Globally enables/disable the memory cache
        29    NW  Not-write through  Globally enables/disable write-back caching
        18    AM  Alignment mask     Alignment check enabled if AM set, AC flag (in EFLAGS register) set, and privilege level is 3
@@ -161,7 +164,7 @@ function CPU_X86() {
        3     TS  Task switched      Allows saving x87 task context only after x87 instruction used after task switch
        2     EM  Emulation          If set, no x87 floating point unit present, if clear, x87 FPU present
        1     MP  Monitor co-processor   Controls interaction of WAIT/FWAIT instructions with TS flag in CR0
-       0     PE  Protected Mode Enable  If 1, system is in protected mode, else system is in real mode
+       0     PE  Protected Mode Enable  If 1, system is in protected mode, else system is in real mode(1表示是保护模式，0表示是实模式)
     */
     this.cr0 = (1 << 0); //PE-mode ON
 
@@ -177,11 +180,13 @@ function CPU_X86() {
        Used when virtual addressing is enabled, hence when the PG
        bit is set in CR0.  CR3 enables the processor to translate
        virtual addresses into physical addresses by locating the page
-       directory and page tables for the current task.
+       directory and page tables for the current task.(如果cr0的PG位设置了，CPU能通过CR3找到当前任务的页目录从而能进行虚拟到线性地址得转换【linux中线性地址就是物理地址】)
 
        Typically, the upper 20 bits of CR3 become the page directory
        base register (PDBR), which stores the physical address of the
-       first page directory entry.  */
+       first page directory entry. 
+       高20位就是页基址寄存器PDBR, 保存了第一个页目入口
+    */
     this.cr3 = 0;
 
     /* CR4
