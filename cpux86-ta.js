@@ -33,16 +33,18 @@ Memory Modes
 The x86 transforms logical addresses (i.e., addresses as viewed by
 programmers) into physical address (i.e., actual addresses in physical
 memory) in two steps:
-x86转换逻辑地址到物理地址需要通过2步（这里是直译），其实Linux的转换是通过分页地址转换
-从虚拟地址转换成线性地址也就是线性地址也就是逻辑地址，然后通过分段地址转换成物理地址。
+x86转换逻辑地址到物理地址需要通过2步。
+
 
 - Segment translation, in which a logical address (consisting of a
 segment selector and segment offset) are converted to a linear
 address.
+通过分段转换，将逻辑地址转换成线性地址。
 
 - Page translation, in which a linear address is converted to
 a physical address. This step is optional, at the discretion of
 systems-software designers.
+通过分页转换，将线性地址转换成物理地址，如果cr0分页标致位未开启，线性地址直接就是物理地址。
 
 Paged Memory
 --------------
@@ -337,6 +339,7 @@ function CPU_X86() {
        A translation lookaside buffer (TLB) is a CPU cache that memory
        management hardware uses to improve virtual address translation
        speed.
+       tlb是cpu内存管理的cache硬件用于提高虚拟地址的转换效率
 
        A TLB has a fixed number of slots that contain page table
        entries, which map virtual addresses to physical addresses. The
