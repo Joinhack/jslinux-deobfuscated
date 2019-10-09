@@ -380,7 +380,9 @@ CPU_X86.prototype.phys_mem_resize = function(new_mem_size) {
    memory access emulation routines */
 CPU_X86.prototype.ld8_phys  = function(mem8_loc)    {  return this.phys_mem8[mem8_loc]; };
 CPU_X86.prototype.st8_phys  = function(mem8_loc, x) {         this.phys_mem8[mem8_loc] = x; };
+//获取32位的地址数据
 CPU_X86.prototype.ld32_phys = function(mem8_loc)    {  return this.phys_mem32[mem8_loc >> 2]; };
+//设置32位的地址数据
 CPU_X86.prototype.st32_phys = function(mem8_loc, x) {         this.phys_mem32[mem8_loc >> 2] = x; };
 
 /*
@@ -389,9 +391,10 @@ CPU_X86.prototype.st32_phys = function(mem8_loc, x) {         this.phys_mem32[me
 */
 CPU_X86.prototype.tlb_set_page = function(mem8_loc, page_val, set_write_tlb, set_user_tlb) {
     var i, x, j;
-    page_val &= -4096; // only top 20bits matter
+    page_val &= -4096; // only top 20bits matter 保留高20位 
     mem8_loc &= -4096; // only top 20bits matter
-    x = mem8_loc ^ page_val; // XOR used to simulate hashing
+    //页地址与虚拟地址的高20位进行xor 再取地址的时候在此与虚拟地址进行xor取出页地址
+    x = mem8_loc ^ page_val; // XOR used to simulate hashing 
     i = mem8_loc >>> 12; // top 20bits point to TLB
     if (this.tlb_read_kernel[i] == -1) {
         if (this.tlb_pages_count >= 2048) {
@@ -3562,32 +3565,42 @@ CPU_X86.prototype.exec_internal = function(N_cycles, interrupt) {
     /*
        Typically, the upper 20 bits of CR3 become the page directory base register (PDBR),
        which stores the physical address of the first page directory entry.
+       通常，CR3的高20为用于存放页目基址,第一个页目入口物理地址，也叫页目基址寄存器（PDBR）.
+       -4096的补码进行计算的原因是js中number长度不定，-4096是的补码只要保障后面为12位为0其余高位均为1
+       https://zhuanlan.zhihu.com/p/65298260
     */
-    function do_tlb_set_page(Gd, Hd, ja) {
+    function do_tlb_set_page(mem8_loc, Hd, ja) {
         var Id, Jd, error_code, Kd, Ld, Md, Nd, ud, Od;
-        if (!(cpu.cr0 & (1 << 31))) { //CR0: bit31 PG Paging If 1, enable paging and use the CR3 register, else disable paging
-            cpu.tlb_set_page(Gd & -4096, Gd & -4096, 1);
+        if (!(cpu.cr0 & (1 << 31))) { //CR0: bit31 PG Paging If 1, enable paging and use the CR3 register, else disable paging 这里是为0逻辑
+            cpu.tlb_set_page(mem8_loc & -4096, mem8_loc & -4096, 1);
         } else {
-            Id = (cpu.cr3 & -4096) + ((Gd >> 20) & 0xffc);
+            //页目地址：cr3的后12位清0（页目地址） 与内存高12位的后2低2位清零求和
+            Id = (cpu.cr3 & -4096) + ((mem8_loc >> 20) & 0xffc);
             Jd = cpu.ld32_phys(Id);
+            //https://wiki.osdev.org/Paging "Page Directory entry" 第1位， Present位表示是否地址存在，如果地址存在，就不继续寻址，直接调到后面进行page fault的逻辑错里,后续对page directory entry的处理都一样
             if (!(Jd & 0x00000001)) {
                 error_code = 0;
             } else {
+                //无读写标记，将读写标记设置回去，此标记如果是1表示内存是读写状态，如果是0表示只读
                 if (!(Jd & 0x00000020)) {
                     Jd |= 0x00000020;
                     cpu.st32_phys(Id, Jd);
                 }
-                Kd = (Jd & -4096) + ((Gd >> 10) & 0xffc);
+                //中间页表地址
+                Kd = (Jd & -4096) + ((mem8_loc >> 10) & 0xffc);
                 Ld = cpu.ld32_phys(Kd);
                 if (!(Ld & 0x00000001)) {
                     error_code = 0;
                 } else {
                     Md = Ld & Jd;
+                    //特权访问判断，是否特权被保护
                     if (ja && !(Md & 0x00000004)) {
                         error_code = 0x01;
+                    //页读写判断Hd 一般是写为1 读为0    
                     } else if (Hd && !(Md & 0x00000002)) {
                         error_code = 0x01;
                     } else {
+                        //能否读写访问
                         Nd = (Hd && !(Ld & 0x00000040));
                         if (!(Ld & 0x00000020) || Nd) {
                             Ld |= 0x00000020;
@@ -3601,7 +3614,8 @@ CPU_X86.prototype.exec_internal = function(N_cycles, interrupt) {
                         Od = 0;
                         if (Md & 0x00000004)
                             Od = 1;
-                        cpu.tlb_set_page(Gd & -4096, Ld & -4096, ud, Od);
+                        //此就算优化调 函数内做了处理
+                        cpu.tlb_set_page(mem8_loc, Ld, ud, Od);
                         return;
                     }
                 }
@@ -3609,7 +3623,7 @@ CPU_X86.prototype.exec_internal = function(N_cycles, interrupt) {
             error_code |= Hd << 1;
             if (ja)
                 error_code |= 0x04;
-            cpu.cr2 = Gd;
+            cpu.cr2 = mem8_loc;
             abort_with_error_code(14, error_code);
         }
     }
